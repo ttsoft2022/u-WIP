@@ -77,9 +77,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.uwiprn"
+    namespace "com.ttsoft.uwip"
     defaultConfig {
-        applicationId "com.uwiprn"
+        applicationId "com.ttsoft.uwip"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -103,6 +103,13 @@ android {
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+
+    // 16KB page size support
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = false
         }
     }
 }
