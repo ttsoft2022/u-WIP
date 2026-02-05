@@ -28,6 +28,23 @@ const DRAWER_WIDTH = SCREEN_WIDTH * 0.7;
 // Screen types
 type Screen = 'Login' | 'Home' | 'DocList' | 'DocDetail' | 'DocsToday';
 
+// Screen Actions Context - for screens to communicate with header
+interface ScreenActionsContextType {
+  setSaveAction: (action: (() => void) | null) => void;
+  saveAction: (() => void) | null;
+  setIsSaving: (saving: boolean) => void;
+  isSaving: boolean;
+}
+
+const ScreenActionsContext = createContext<ScreenActionsContextType>({
+  setSaveAction: () => {},
+  saveAction: null,
+  setIsSaving: () => {},
+  isSaving: false,
+});
+
+export const useScreenActions = () => useContext(ScreenActionsContext);
+
 interface NavigationState {
   currentScreen: Screen;
   params?: any;
@@ -82,7 +99,10 @@ const Header: React.FC<{
   showBack?: boolean;
   onMenuPress?: () => void;
   onBackPress?: () => void;
-}> = ({title, showMenu, showBack, onMenuPress, onBackPress}) => (
+  rightText?: string;
+  onRightPress?: () => void;
+  rightDisabled?: boolean;
+}> = ({title, showMenu, showBack, onMenuPress, onBackPress, rightText, onRightPress, rightDisabled}) => (
   <View style={styles.header}>
     <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
     <View style={styles.headerLeft}>
@@ -100,13 +120,25 @@ const Header: React.FC<{
     <View style={styles.headerCenter}>
       <Text style={styles.headerTitle}>{title}</Text>
     </View>
-    <View style={styles.headerRight} />
+    <View style={styles.headerRight}>
+      {rightText && onRightPress && (
+        <TouchableOpacity
+          onPress={onRightPress}
+          disabled={rightDisabled}
+          style={styles.headerRightButton}>
+          <Text style={[styles.headerRightText, rightDisabled && styles.headerRightTextDisabled]}>
+            {rightText}
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
   </View>
 );
 
 // Root Navigator with State-based Navigation (like u@Teams)
 const RootNavigator: React.FC = () => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const canEditDocuments = useAuthStore(state => state.canEditDocuments);
 
   // Navigation state
   const [navState, setNavState] = useState<NavigationState>({
@@ -114,6 +146,10 @@ const RootNavigator: React.FC = () => {
     params: undefined,
     history: [],
   });
+
+  // Screen actions state (for header save button)
+  const [saveAction, setSaveAction] = useState<(() => void) | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Drawer state
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -293,12 +329,18 @@ const RootNavigator: React.FC = () => {
         );
 
       case 'DocDetail':
+        // canEdit = isEdit (screen allows editing) AND canEditDocuments (user has permission)
+        const isEditMode = navState.params?.isEdit !== false;
+        const canEdit = isEditMode && canEditDocuments();
         return (
           <View style={styles.screenContainer}>
             <Header
               title="PHIẾU GIAO NHẬN"
               showBack
               onBackPress={goBack}
+              rightText={canEdit ? 'Lưu' : undefined}
+              onRightPress={canEdit && saveAction ? saveAction : undefined}
+              rightDisabled={isSaving}
             />
             <DocDetailScreen />
           </View>
@@ -324,8 +366,9 @@ const RootNavigator: React.FC = () => {
   return (
     <NavigationContext.Provider value={{navigate, goBack, reset, params: navState.params}}>
       <DrawerContext.Provider value={{openDrawer, closeDrawer, performLogout}}>
-        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-          {renderScreen()}
+        <ScreenActionsContext.Provider value={{setSaveAction, saveAction, setIsSaving, isSaving}}>
+          <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+            {renderScreen()}
 
           {/* Modal Drawer */}
           <Modal
@@ -348,8 +391,9 @@ const RootNavigator: React.FC = () => {
                 <DrawerContent onClose={closeDrawer} />
               </Animated.View>
             </View>
-          </Modal>
-        </SafeAreaView>
+            </Modal>
+          </SafeAreaView>
+        </ScreenActionsContext.Provider>
       </DrawerContext.Provider>
     </NavigationContext.Provider>
   );
@@ -394,6 +438,20 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 56,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  headerRightButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
+  headerRightText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  headerRightTextDisabled: {
+    color: '#999999',
   },
   menuButton: {
     padding: 8,

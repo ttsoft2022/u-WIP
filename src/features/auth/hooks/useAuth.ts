@@ -1,6 +1,7 @@
 import {useMutation, useQuery} from '@tanstack/react-query';
 import {authApi} from '../services/authApi';
 import {useAuthStore} from '../store/authStore';
+import {PERMISSIONS} from '../../../shared/constants/permissions';
 
 /**
  * Hook for login mutation
@@ -35,7 +36,7 @@ export const useLogin = () => {
  * Hook for getting home info
  */
 export const useHomeInfo = () => {
-  const {user, isAuthenticated, setHomeInfo} = useAuthStore();
+  const {user, isAuthenticated, setHomeInfo, setPermissions} = useAuthStore();
 
   return useQuery({
     queryKey: ['homeInfo', user?.userNo],
@@ -45,6 +46,17 @@ export const useHomeInfo = () => {
       }
       const data = await authApi.getHomeInfo(user.userNo);
       setHomeInfo(data);
+
+      // Update permissions based on rights from API
+      const permissions: string[] = [];
+      if (data.right719) {
+        permissions.push(PERMISSIONS.VIEW_DOCUMENTS);
+      }
+      if (data.right729) {
+        permissions.push(PERMISSIONS.EDIT_DOCUMENTS);
+      }
+      setPermissions(permissions);
+
       return data;
     },
     enabled: isAuthenticated && !!user?.userNo,

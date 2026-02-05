@@ -52,13 +52,15 @@ export const documentsApi = {
   /**
    * Get document detail
    * API: getwipdocdetail (GET method)
-   * Params: noDep, noLot, noOrd (=NO_ORD_712), fdate, tdate, type
+   * Params: noDed, noDep, noLot, noOrd (=NO_ORD_712), fdate, tdate, type
+   * Note: noDed is empty string from DocList, actual value from DocsToday
    */
   getDocDetail: async (
     noLot: string,
     noOrd712: string,
     noDep: string,
     docType: string,
+    noDed: string = '', // noDed: empty from DocList, actual from DocsToday
   ): Promise<{master: DocMaster; details: DocDetail[]}> => {
     try {
       const config = await serverConfigService.getConfig();
@@ -73,6 +75,7 @@ export const documentsApi = {
 
       const response = await axios.get(url, {
         params: {
+          noDed: noDed, // Required param - empty for new, filled for existing
           noDep: noDep,
           noLot: noLot,
           noOrd: noOrd712,
@@ -100,6 +103,7 @@ export const documentsApi = {
   /**
    * Get today's documents
    * API: getwipdoclisttoday (GET method)
+   * Params: username, fdate, tdate, type (same as Android)
    */
   getDocsToday: async (docType: number): Promise<DocMaster[]> => {
     try {
@@ -111,11 +115,16 @@ export const documentsApi = {
       const user = useAuthStore.getState().user;
       const username = user?.userNo || '';
 
+      // Get today's date in yyyy-MM-dd format (same as Android)
+      const today = new Date().toISOString().split('T')[0];
+
       const url = `${config.serverUrl}/${config.databaseAlias}/general/swip/getwipdoclisttoday`;
 
       const response = await axios.get(url, {
         params: {
           username: username,
+          fdate: today,
+          tdate: today,
           type: docType,
         },
         timeout: 15000,

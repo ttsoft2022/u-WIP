@@ -59,6 +59,8 @@ const DocListScreen: React.FC = () => {
       noPrd: doc.NO_PRD,
       namePrd: doc.NAME_PRD,
       docType: docType,
+      isEdit: true, // Allow editing from DocList (like Android)
+      noDed: '', // Empty for new documents from DocList (like Android)
     });
   };
 

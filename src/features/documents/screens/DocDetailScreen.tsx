@@ -1,18 +1,17 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
   FlatList,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
-import {useAppNavigation} from '../../../navigation/RootNavigator';
+import {useAppNavigation, useScreenActions} from '../../../navigation/RootNavigator';
 import {useDocDetail, useSaveDocument} from '../hooks/useDocuments';
 import {useAuthStore} from '../../auth/store/authStore';
 import type {DocDetail} from '../types/document.types';
@@ -34,11 +33,15 @@ interface EditableDetail extends DocDetail {
 
 const DocDetailScreen: React.FC = () => {
   const {params, goBack} = useAppNavigation();
-  const {noLot, noOrd, noOrd712, noSty, nameDepFrom, nameDepTo, noDep, noDepTo, noPrd, namePrd, docType} = params || {};
+  const {noLot, noOrd, noOrd712, noSty, nameDepFrom, nameDepTo, noDep, noDepTo, noPrd, namePrd, docType, isEdit, noDed} = params || {};
+  const {setSaveAction, setIsSaving} = useScreenActions();
 
   const {canEditDocuments} = useAuthStore();
-  const canEdit = canEditDocuments();
-  const {data, isLoading} = useDocDetail(noLot, noOrd712, noDep, docType);
+  // canEdit = isEdit (screen allows editing) AND canEditDocuments (user has permission)
+  // Like Android: isEdit=1 from DocList, isEdit=0 from DocsToday
+  const canEdit = isEdit !== false && canEditDocuments();
+  // noDed: empty from DocList, actual NO_DED from DocsToday (like Android)
+  const {data, isLoading} = useDocDetail(noLot, noOrd712, noDep, docType, noDed || '');
   const saveMutation = useSaveDocument();
 
   const [editableDetails, setEditableDetails] = useState<EditableDetail[]>([]);
@@ -54,23 +57,13 @@ const DocDetailScreen: React.FC = () => {
     }
   }, [data?.details]);
 
-  // Calculate totals
-  const totalColors = editableDetails.length;
-  const totalQty = editableDetails.reduce((sum, item) => {
-    const qty = parseInt(item.editedQty, 10) || 0;
-    return sum + qty;
-  }, 0);
+  // Update isSaving state when mutation status changes
+  useEffect(() => {
+    setIsSaving(saveMutation.isPending);
+  }, [saveMutation.isPending, setIsSaving]);
 
-  const handleQtyChange = (index: number, value: string) => {
-    const numericValue = value.replace(/[^0-9]/g, '');
-    setEditableDetails(prev =>
-      prev.map((item, i) =>
-        i === index ? {...item, editedQty: numericValue} : item,
-      ),
-    );
-  };
-
-  const validateAndSave = () => {
+  // Register save action for header button
+  const handleSave = useCallback(() => {
     const invalidItems = editableDetails.filter(item => {
       if (!item.editedQty) return false;
       const qty = parseInt(item.editedQty, 10);
@@ -82,13 +75,11 @@ const DocDetailScreen: React.FC = () => {
       return;
     }
 
-    // Format details for API: {noCol, quantity}
     const details = editableDetails.map(item => ({
       noCol: item.NO_COL,
       quantity: parseInt(item.editedQty, 10) || 0,
     }));
 
-    // Check if any quantity was entered
     const hasChanges = details.some(d => d.quantity > 0);
     if (!hasChanges) {
       Alert.alert('Thông báo', 'Chưa có số lượng để lưu');
@@ -128,9 +119,40 @@ const DocDetailScreen: React.FC = () => {
         },
       },
     ]);
+  }, [editableDetails, noOrd, noOrd712, noLot, noDep, noDepTo, noPrd, docType, saveMutation, goBack]);
+
+  // Register save action with header when canEdit
+  useEffect(() => {
+    if (canEdit) {
+      setSaveAction(() => handleSave);
+    }
+    return () => {
+      setSaveAction(null);
+    };
+  }, [canEdit, handleSave, setSaveAction]);
+
+  // Calculate totals
+  const totalColors = editableDetails.length;
+  const totalQty = editableDetails.reduce((sum, item) => {
+    // In view-only mode (canEdit=false), show sum of QTY_IN_OUT (delivered quantities)
+    // In edit mode, show sum of editedQty (quantities being entered)
+    if (canEdit) {
+      const qty = parseInt(item.editedQty, 10) || 0;
+      return sum + qty;
+    } else {
+      return sum + (item.QTY_IN_OUT || 0);
+    }
+  }, 0);
+
+  const handleQtyChange = (index: number, value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
+    setEditableDetails(prev =>
+      prev.map((item, i) =>
+        i === index ? {...item, editedQty: numericValue} : item,
+      ),
+    );
   };
 
-  // Save button is now rendered in the screen itself
 
   const renderHeader = () => {
     return (
@@ -201,26 +223,10 @@ const DocDetailScreen: React.FC = () => {
 
   const renderFooter = () => (
     <View style={styles.footerCard}>
-      <View style={styles.footerTopRow}>
-        <View style={styles.footerInfoContainer}>
-          <Text style={styles.footerLabel}>Tổng cộng</Text>
-          <View style={styles.footerRow}>
-            <Text style={styles.footerColorCount}>{totalColors} màu</Text>
-            <Text style={styles.footerTotalQty}>{totalQty}</Text>
-          </View>
-        </View>
-        {canEdit && (
-          <TouchableOpacity
-            onPress={validateAndSave}
-            disabled={saveMutation.isPending}
-            style={styles.saveButton}>
-            {saveMutation.isPending ? (
-              <ActivityIndicator size="small" color={COLORS.white} />
-            ) : (
-              <Text style={styles.saveButtonText}>Lưu</Text>
-            )}
-          </TouchableOpacity>
-        )}
+      <Text style={styles.footerLabel}>Tổng cộng</Text>
+      <View style={styles.footerRow}>
+        <Text style={styles.footerColorCount}>{totalColors} màu</Text>
+        <Text style={styles.footerTotalQty}>{totalQty}</Text>
       </View>
     </View>
   );
@@ -263,15 +269,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  headerSaveButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  headerSaveText: {
-    color: COLORS.blue,
-    fontSize: 16,
-    fontWeight: '600',
   },
   // Header card
   headerCard: {
@@ -400,26 +397,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.black,
-  },
-  footerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  footerInfoContainer: {
-    flex: 1,
-    marginRight: 16,
-  },
-  saveButton: {
-    backgroundColor: COLORS.blue,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  saveButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

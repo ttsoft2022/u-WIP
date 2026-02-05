@@ -15,11 +15,12 @@ export const useDocList = (params: DocListParams) => {
 
 /**
  * Hook for fetching document detail
+ * noDed: empty string from DocList, actual NO_DED from DocsToday
  */
-export const useDocDetail = (noLot: string, noOrd712: string, noDep: string, docType: string) => {
+export const useDocDetail = (noLot: string, noOrd712: string, noDep: string, docType: string, noDed: string = '') => {
   return useQuery({
-    queryKey: ['docDetail', noLot, noOrd712, noDep, docType],
-    queryFn: () => documentsApi.getDocDetail(noLot, noOrd712, noDep, docType),
+    queryKey: ['docDetail', noLot, noOrd712, noDep, docType, noDed],
+    queryFn: () => documentsApi.getDocDetail(noLot, noOrd712, noDep, docType, noDed),
     enabled: !!noLot && !!noOrd712 && !!docType,
   });
 };

@@ -1,4 +1,4 @@
-// Document Master - matches API response from getwipdoclist
+// Document Master - matches API response from getwipdoclist and getwipdoclisttoday
 export interface DocMaster {
   NO_LOT: string;
   NO_ORD: string;
@@ -11,6 +11,14 @@ export interface DocMaster {
   NO_PRD: string;
   NAME_PRD: string;
   QTY: number;
+  // Additional fields from getwipdoclisttoday
+  NO_DED?: string;
+  DED_712_TYPE?: number;
+  DED_712_TYPE_NAME?: string;
+  NO_DEP_CREATE?: string;
+  NAME_DEP_CREATE?: string;
+  CREATEDATE_DED?: string;
+  DEPLOYDATE_DED?: string;
 }
 
 // Document Detail - matches API response from getwipdocdetail

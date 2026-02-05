@@ -6,6 +6,7 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import {useAppNavigation} from '../../../navigation/RootNavigator';
 import {useDocsToday} from '../hooks/useDocuments';
@@ -21,7 +22,7 @@ const COLORS = {
 };
 
 const DocsTodayScreen: React.FC = () => {
-  const {params} = useAppNavigation();
+  const {navigate, params} = useAppNavigation();
   const docType = params?.docType || '1';
 
   const {data: documents, isLoading, refetch} = useDocsToday(parseInt(docType, 10));
@@ -32,8 +33,28 @@ const DocsTodayScreen: React.FC = () => {
     return num.toLocaleString('vi-VN');
   };
 
+  // Navigate to DocDetail with isEdit=false (view-only mode, like Android)
+  // Pass noDed (NO_DED) for existing documents from today's list
+  const handleDocPress = (doc: DocMaster) => {
+    navigate('DocDetail', {
+      noLot: doc.NO_LOT,
+      noOrd: doc.NO_ORD,
+      noOrd712: doc.NO_ORD_712,
+      noSty: doc.NO_STY,
+      nameDepFrom: doc.NAME_DEP_FROM,
+      nameDepTo: doc.NAME_DEP_TO,
+      noDep: doc.NO_DEP_FROM,
+      noDepTo: doc.NO_DEP_TO,
+      noPrd: doc.NO_PRD,
+      namePrd: doc.NAME_PRD,
+      docType: docType,
+      isEdit: false, // View-only mode for today's documents
+      noDed: doc.NO_DED || '', // Pass actual NO_DED for existing documents
+    });
+  };
+
   const renderItem = ({item}: {item: DocMaster}) => (
-    <View style={styles.itemContainer}>
+    <TouchableOpacity style={styles.itemContainer} onPress={() => handleDocPress(item)}>
       {/* Department Badge */}
       <View style={styles.badgeContainer}>
         <Text style={styles.badgeText}>{item.NAME_DEP_FROM || 'N/A'}</Text>
@@ -68,7 +89,7 @@ const DocsTodayScreen: React.FC = () => {
 
       {/* Quantity at bottom right */}
       <Text style={styles.quantityText}>{formatNumber(item.QTY)}</Text>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderEmpty = () => (
