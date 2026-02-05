@@ -9,19 +9,15 @@ import {
   ImageBackground,
   ImageSourcePropType,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useAuthStore} from '../../auth/store/authStore';
 import {useHomeInfo} from '../../auth/hooks/useAuth';
 import {ChevronRightIcon} from '../../../components/icons';
-import type {DocumentsStackParamList} from '../../../shared/types/navigation.types';
+import {useAppNavigation} from '../../../navigation/RootNavigator';
 
 // Button background images
 const btnClothes = require('../../../assets/images/btn_clothes.png');
 const btnWasher = require('../../../assets/images/btn_washer.png');
 const btnIron = require('../../../assets/images/btn_iron.png');
-
-type NavigationProp = NativeStackNavigationProp<DocumentsStackParamList>;
 
 // Colors from Android app
 const COLORS = {
@@ -82,16 +78,16 @@ const TODAY_CONFIG = [
 ];
 
 const HomeScreen: React.FC = () => {
-  const navigation = useNavigation<NavigationProp>();
+  const {navigate} = useAppNavigation();
   const {user, homeInfo} = useAuthStore();
   const {refetch, isLoading} = useHomeInfo();
 
   const handleButtonPress = (docType: string) => {
-    navigation.navigate('DocList', {docType});
+    navigate('DocList', {docType});
   };
 
   const handleTodayItemPress = (docType: string) => {
-    navigation.navigate('DocsToday', {docType});
+    navigate('DocsToday', {docType});
   };
 
   const getRemainQty = (buttonId: string): number => {
@@ -228,7 +224,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   contentContainer: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    flexGrow: 1,
   },
   // Header styles
   headerContainer: {
@@ -255,10 +253,10 @@ const styles = StyleSheet.create({
   },
   mainButtonWrapper: {
     flex: 1,
-    marginHorizontal: 4,
-    borderRadius: 12,
+    marginHorizontal: 8,
+    borderRadius: 24,
     overflow: 'hidden',
-    aspectRatio: 1.2, // Reduce height (was 1 for square)
+    aspectRatio: 1,
   },
   mainButton: {
     flex: 1,
@@ -269,7 +267,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   mainButtonImage: {
-    borderRadius: 12,
+    borderRadius: 24,
   },
   buttonNumber: {
     position: 'absolute',

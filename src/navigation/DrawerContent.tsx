@@ -8,10 +8,10 @@ import {
   ScrollView,
   SafeAreaView,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useAuthStore} from '../features/auth/store/authStore';
 import {serverConfigService} from '../services/serverConfig';
 import {DatabaseIcon, LogoutIcon, RefreshIcon} from '../components/icons';
+import {useDrawer} from './RootNavigator';
 
 const COLORS = {
   blue: '#007AFF',
@@ -26,7 +26,8 @@ interface DrawerContentProps {
 }
 
 const DrawerContent: React.FC<DrawerContentProps> = ({onClose}) => {
-  const {user, homeInfo, logout} = useAuthStore();
+  const {user} = useAuthStore();
+  const {performLogout} = useDrawer();
   const [dbAlias, setDbAlias] = React.useState<string>('');
 
   React.useEffect(() => {
@@ -45,31 +46,28 @@ const DrawerContent: React.FC<DrawerContentProps> = ({onClose}) => {
   };
 
   const handleLogout = () => {
-    onClose();
     Alert.alert('Đổi người dùng', 'Bạn có chắc muốn đăng xuất?', [
       {text: 'Hủy', style: 'cancel'},
       {
         text: 'Đồng ý',
         style: 'destructive',
-        onPress: async () => {
-          await AsyncStorage.removeItem('uwip_auto_login');
-          logout();
+        onPress: () => {
+          console.log('[DrawerContent] handleLogout - calling performLogout(false)');
+          performLogout(false);
         },
       },
     ]);
   };
 
   const handleChangeCustomer = () => {
-    onClose();
     Alert.alert('Đổi khách hàng', 'Bạn có chắc muốn đổi sang khách hàng khác?', [
       {text: 'Hủy', style: 'cancel'},
       {
         text: 'Đồng ý',
         style: 'destructive',
-        onPress: async () => {
-          await serverConfigService.clearConfig();
-          await AsyncStorage.removeItem('uwip_auto_login');
-          logout();
+        onPress: () => {
+          console.log('[DrawerContent] handleChangeCustomer - calling performLogout(true)');
+          performLogout(true);
         },
       },
     ]);

@@ -72,9 +72,15 @@ export const useAuthStore = create<AuthState>()(
         })),
 
       logout: () => {
-        // Clear stored data
-        mmkvStorage.delete(STORAGE_KEYS.SELECTED_DATABASE);
-        mmkvStorage.delete(STORAGE_KEYS.USER_INFO);
+        // Clear stored data (with safety check)
+        try {
+          if (mmkvStorage) {
+            mmkvStorage.delete(STORAGE_KEYS.SELECTED_DATABASE);
+            mmkvStorage.delete(STORAGE_KEYS.USER_INFO);
+          }
+        } catch (error) {
+          console.warn('[authStore] Error clearing storage on logout:', error);
+        }
 
         set({
           isAuthenticated: false,

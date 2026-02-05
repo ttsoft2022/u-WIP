@@ -9,31 +9,23 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import {useNavigation, useRoute} from '@react-navigation/native';
-import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import type {RouteProp} from '@react-navigation/native';
+import {useAppNavigation} from '../../../navigation/RootNavigator';
 import {useDocList} from '../hooks/useDocuments';
-import type {DocumentsStackParamList} from '../../../shared/types/navigation.types';
 import type {DocMaster} from '../types/document.types';
-
-type NavigationProp = NativeStackNavigationProp<DocumentsStackParamList, 'DocList'>;
-type RouteProps = RouteProp<DocumentsStackParamList, 'DocList'>;
 
 const COLORS = {
   blue: '#007AFF',
-  green: '#4CAF50',
   white: '#FFFFFF',
   black: '#000000',
   grayText: '#666666',
-  grayLight: '#999999',
-  grayBackground: '#f5f5f5',
+  grayBackground: '#EEEEEE',
+  grayItemBg: '#F5F5F5',
   grayBorder: '#e0e0e0',
 };
 
 const DocListScreen: React.FC = () => {
-  const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<RouteProps>();
-  const {docType} = route.params;
+  const {navigate, params} = useAppNavigation();
+  const docType = params?.docType || '1';
 
   const [searchText, setSearchText] = useState('');
 
@@ -55,28 +47,63 @@ const DocListScreen: React.FC = () => {
   }, [documents, searchText]);
 
   const handleDocPress = (doc: DocMaster) => {
-    navigation.navigate('DocDetail', {
+    navigate('DocDetail', {
       noLot: doc.NO_LOT,
       noOrd: doc.NO_ORD,
+      noOrd712: doc.NO_ORD_712,
+      noSty: doc.NO_STY,
+      nameDepFrom: doc.NAME_DEP_FROM,
+      nameDepTo: doc.NAME_DEP_TO,
+      noDep: doc.NO_DEP_FROM,
+      noDepTo: doc.NO_DEP_TO,
+      noPrd: doc.NO_PRD,
+      namePrd: doc.NAME_PRD,
       docType: docType,
     });
   };
 
+  // Format number with dots for thousands
+  const formatNumber = (num: number | undefined): string => {
+    if (num === undefined || num === null) return '0';
+    return num.toLocaleString('vi-VN');
+  };
+
   const renderItem = ({item}: {item: DocMaster}) => (
     <TouchableOpacity style={styles.itemContainer} onPress={() => handleDocPress(item)}>
-      <View style={styles.itemHeader}>
-        <Text style={styles.lotNumber}>{item.NO_LOT}</Text>
-        <Text style={styles.quantity}>SL: {item.QTY}</Text>
+      {/* Department Badge */}
+      <View style={styles.badgeContainer}>
+        <Text style={styles.badgeText}>{item.NAME_DEP_FROM || 'N/A'}</Text>
       </View>
-      <View style={styles.itemBody}>
-        <Text style={styles.orderInfo}>
-          Order: {item.NO_ORD} | Style: {item.NO_STY}
-        </Text>
-        <Text style={styles.departmentInfo}>
-          {item.NAME_DEP_FROM} → {item.NAME_DEP_TO}
-        </Text>
-        <Text style={styles.productInfo}>{item.NAME_PRD}</Text>
+
+      {/* Detail Rows */}
+      <View style={styles.detailsContainer}>
+        {/* Style Row */}
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Style</Text>
+          <Text style={styles.detailValueBold}>{item.NO_STY || ''}</Text>
+        </View>
+
+        {/* Lot Row */}
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Lô</Text>
+          <Text style={styles.detailValue}>{item.NO_LOT || ''}</Text>
+        </View>
+
+        {/* PO Row */}
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>PO</Text>
+          <Text style={styles.detailValue}>{item.NO_ORD || ''}</Text>
+        </View>
+
+        {/* SP Row */}
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>SP</Text>
+          <Text style={styles.detailValue}>{item.NAME_PRD || ''}</Text>
+        </View>
       </View>
+
+      {/* Quantity at bottom right */}
+      <Text style={styles.quantityText}>{formatNumber(item.QTY)}</Text>
     </TouchableOpacity>
   );
 
@@ -94,7 +121,8 @@ const DocListScreen: React.FC = () => {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Tìm theo Lot, Order, Style..."
+          placeholder="Tìm PO"
+          placeholderTextColor={COLORS.grayText}
           value={searchText}
           onChangeText={setSearchText}
           autoCapitalize="none"
@@ -126,22 +154,25 @@ const DocListScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.grayBackground,
+    backgroundColor: COLORS.white,
   },
   searchContainer: {
-    padding: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: COLORS.white,
+  },
+  searchInput: {
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.grayBorder,
-  },
-  searchInput: {
-    backgroundColor: COLORS.grayBackground,
-    borderRadius: 8,
-    padding: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
     fontSize: 16,
+    textAlign: 'center',
+    color: COLORS.black,
   },
   listContent: {
-    padding: 12,
+    padding: 8,
   },
   loadingContainer: {
     flex: 1,
@@ -149,48 +180,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   itemContainer: {
-    backgroundColor: COLORS.white,
-    borderRadius: 10,
-    marginBottom: 12,
+    backgroundColor: COLORS.grayItemBg,
+    borderRadius: 8,
+    marginBottom: 8,
     padding: 16,
-    shadowColor: COLORS.black,
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    position: 'relative',
   },
-  itemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  badgeContainer: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.blue,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 12,
+  },
+  badgeText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  detailsContainer: {
     marginBottom: 8,
   },
-  lotNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.blue,
+  detailRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
   },
-  quantity: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.green,
-  },
-  itemBody: {
-    marginBottom: 4,
-  },
-  orderInfo: {
-    fontSize: 14,
+  detailLabel: {
+    width: 80,
+    fontSize: 15,
     color: COLORS.black,
-    marginBottom: 4,
+    fontWeight: 'bold',
   },
-  departmentInfo: {
-    fontSize: 14,
-    color: COLORS.grayText,
-    marginBottom: 4,
+  detailValue: {
+    flex: 1,
+    fontSize: 15,
+    color: COLORS.black,
   },
-  productInfo: {
-    fontSize: 14,
-    color: COLORS.grayText,
+  detailValueBold: {
+    flex: 1,
+    fontSize: 15,
+    color: COLORS.black,
+    fontWeight: 'bold',
+  },
+  quantityText: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.black,
   },
   emptyContainer: {
     flex: 1,

@@ -34,7 +34,11 @@ const COLORS = {
 
 const AUTO_LOGIN_KEY = 'uwip_auto_login';
 
-const LoginScreen: React.FC = () => {
+interface LoginScreenProps {
+  onLoginSuccess: () => void;
+}
+
+const LoginScreen: React.FC<LoginScreenProps> = ({onLoginSuccess}) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [customerId, setCustomerId] = useState('');
@@ -83,7 +87,9 @@ const LoginScreen: React.FC = () => {
                 username: savedUsername,
                 password: savedPassword,
               });
-              return; // Auto-login successful, don't show login screen
+              // Auto-login successful, navigate to Home
+              onLoginSuccess();
+              return;
             } catch (error) {
               // Auto-login failed, clear saved credentials
               await AsyncStorage.removeItem(AUTO_LOGIN_KEY);
@@ -201,6 +207,9 @@ const LoginScreen: React.FC = () => {
           password: password.trim(),
         }),
       );
+
+      // Navigate to Home
+      onLoginSuccess();
     } catch (error) {
       Alert.alert(
         'Đăng nhập thất bại',

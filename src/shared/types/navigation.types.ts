@@ -1,23 +1,31 @@
-import type {NavigatorScreenParams} from '@react-navigation/native';
-
-// Root Stack
+// Root Stack - single stack with all screens
 export type RootStackParamList = {
-  Auth: NavigatorScreenParams<AuthStackParamList>;
-  Main: NavigatorScreenParams<MainStackParamList>;
+  Login: undefined;
+  Home: undefined;
+  DocList: {docType: string};
+  DocDetail: {
+    noLot: string;
+    noOrd: string;
+    noOrd712: string;
+    noSty: string;
+    nameDepFrom: string;
+    nameDepTo: string;
+    noDep: string;
+    noDepTo: string;
+    noPrd: string;
+    namePrd: string;
+    docType: string;
+  };
+  DocsToday: {docType: string};
 };
 
-// Auth Stack
+// Keep for backwards compatibility
 export type AuthStackParamList = {
   Login: undefined;
 };
 
-// Main Stack (all screens in one stack)
-export type MainStackParamList = {
-  Home: undefined;
-  DocList: {docType: string};
-  DocDetail: {noLot: string; noOrd: string; docType: string};
-  DocsToday: {docType: string};
-};
+// Main Stack (alias for RootStackParamList)
+export type MainStackParamList = RootStackParamList;
 
 // Keep for backwards compatibility
 export type HomeStackParamList = MainStackParamList;

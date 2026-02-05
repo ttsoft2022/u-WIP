@@ -67,6 +67,9 @@ const MainStackNavigator: React.FC = () => {
         headerTintColor: '#000000',
         headerTitleAlign: 'center',
         headerShadowVisible: true,
+        contentStyle: {
+          backgroundColor: '#FFFFFF',
+        },
       }}>
       <Stack.Screen
         name="Home"

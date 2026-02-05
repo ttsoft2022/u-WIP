@@ -11,18 +11,15 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import {useRoute, useNavigation} from '@react-navigation/native';
-import type {RouteProp} from '@react-navigation/native';
-import {useDocDetail, useUpdateDocDetail} from '../hooks/useDocuments';
+import Svg, {Path} from 'react-native-svg';
+import {useAppNavigation} from '../../../navigation/RootNavigator';
+import {useDocDetail, useSaveDocument} from '../hooks/useDocuments';
 import {useAuthStore} from '../../auth/store/authStore';
-import type {DocumentsStackParamList} from '../../../shared/types/navigation.types';
 import type {DocDetail} from '../types/document.types';
-
-type RouteProps = RouteProp<DocumentsStackParamList, 'DocDetail'>;
 
 const COLORS = {
   blue: '#007AFF',
-  green: '#4CAF50',
+  blueLight: '#D9EBFF',
   white: '#FFFFFF',
   black: '#333333',
   grayText: '#666666',
@@ -36,13 +33,13 @@ interface EditableDetail extends DocDetail {
 }
 
 const DocDetailScreen: React.FC = () => {
-  const route = useRoute<RouteProps>();
-  const navigation = useNavigation();
-  const {noLot, noOrd, docType} = route.params;
+  const {params, goBack} = useAppNavigation();
+  const {noLot, noOrd, noOrd712, noSty, nameDepFrom, nameDepTo, noDep, noDepTo, noPrd, namePrd, docType} = params || {};
 
   const {canEditDocuments} = useAuthStore();
-  const {data, isLoading} = useDocDetail(noLot, noOrd, docType);
-  const updateMutation = useUpdateDocDetail();
+  const canEdit = canEditDocuments();
+  const {data, isLoading} = useDocDetail(noLot, noOrd712, noDep, docType);
+  const saveMutation = useSaveDocument();
 
   const [editableDetails, setEditableDetails] = useState<EditableDetail[]>([]);
 
@@ -57,10 +54,15 @@ const DocDetailScreen: React.FC = () => {
     }
   }, [data?.details]);
 
-  const handleQtyChange = (index: number, value: string) => {
-    // Only allow numbers
-    const numericValue = value.replace(/[^0-9]/g, '');
+  // Calculate totals
+  const totalColors = editableDetails.length;
+  const totalQty = editableDetails.reduce((sum, item) => {
+    const qty = parseInt(item.editedQty, 10) || 0;
+    return sum + qty;
+  }, 0);
 
+  const handleQtyChange = (index: number, value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
     setEditableDetails(prev =>
       prev.map((item, i) =>
         i === index ? {...item, editedQty: numericValue} : item,
@@ -69,129 +71,159 @@ const DocDetailScreen: React.FC = () => {
   };
 
   const validateAndSave = () => {
-    // Validate quantities - check against remaining (QTY - QTY_DONE)
     const invalidItems = editableDetails.filter(item => {
       if (!item.editedQty) return false;
       const qty = parseInt(item.editedQty, 10);
-      const remaining = item.QTY - item.QTY_DONE;
-      return qty > remaining;
+      return qty > item.QTY_REMAIN;
     });
 
     if (invalidItems.length > 0) {
-      Alert.alert(
-        'Lỗi',
-        'Số lượng không được vượt quá số lượng còn lại',
-      );
+      Alert.alert('Lỗi', 'Số lượng không được vượt quá số lượng còn lại');
       return;
     }
 
-    // Get items with changes
-    const changedItems = editableDetails
-      .filter(item => item.editedQty && parseInt(item.editedQty, 10) > 0)
-      .map(item => ({
-        noSize: item.NO_SIZE,
-        noColor: item.NO_COLOR,
-        qty: parseInt(item.editedQty, 10),
-      }));
+    // Format details for API: {noCol, quantity}
+    const details = editableDetails.map(item => ({
+      noCol: item.NO_COL,
+      quantity: parseInt(item.editedQty, 10) || 0,
+    }));
 
-    if (changedItems.length === 0) {
-      Alert.alert('Thông báo', 'Chưa có thay đổi để lưu');
+    // Check if any quantity was entered
+    const hasChanges = details.some(d => d.quantity > 0);
+    if (!hasChanges) {
+      Alert.alert('Thông báo', 'Chưa có số lượng để lưu');
       return;
     }
 
-    Alert.alert(
-      'Xác nhận',
-      `Lưu ${changedItems.length} dòng?`,
-      [
-        {text: 'Hủy', style: 'cancel'},
-        {
-          text: 'Lưu',
-          onPress: () => {
-            updateMutation.mutate(
-              {noLot, noOrd, docType, details: changedItems},
-              {
-                onSuccess: () => {
-                  Alert.alert('Thành công', 'Đã lưu thành công', [
-                    {text: 'OK', onPress: () => navigation.goBack()},
-                  ]);
-                },
-                onError: error => {
-                  Alert.alert(
-                    'Lỗi',
-                    error instanceof Error ? error.message : 'Không thể lưu',
-                  );
-                },
+    Alert.alert('Xác nhận', 'Lưu phiếu giao nhận?', [
+      {text: 'Hủy', style: 'cancel'},
+      {
+        text: 'Lưu',
+        onPress: () => {
+          saveMutation.mutate(
+            {
+              noOrd,
+              noOrd712,
+              noLot,
+              noDep,
+              noDepTo,
+              noPrd,
+              docType,
+              details,
+            },
+            {
+              onSuccess: () => {
+                Alert.alert('Thành công', 'Đã lưu thành công', [
+                  {text: 'OK', onPress: () => goBack()},
+                ]);
               },
-            );
-          },
+              onError: error => {
+                Alert.alert(
+                  'Lỗi',
+                  error instanceof Error ? error.message : 'Không thể lưu',
+                );
+              },
+            },
+          );
         },
-      ],
-    );
+      },
+    ]);
   };
 
-  const renderHeader = () => {
-    if (!data?.master) return null;
-    const {master} = data;
+  // Save button is now rendered in the screen itself
 
+  const renderHeader = () => {
     return (
       <View style={styles.headerCard}>
-        <View style={styles.headerRow}>
-          <Text style={styles.headerLabel}>Lot:</Text>
-          <Text style={styles.headerValue}>{master.NO_LOT}</Text>
+        {/* Department badges */}
+        <View style={styles.badgeRow}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{nameDepFrom || 'N/A'}</Text>
+          </View>
+          <View style={styles.arrowContainer}>
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M9 6l6 6-6 6"
+                stroke={COLORS.blue}
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </View>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{nameDepTo || 'N/A'}</Text>
+          </View>
         </View>
-        <View style={styles.headerRow}>
-          <Text style={styles.headerLabel}>Order:</Text>
-          <Text style={styles.headerValue}>{master.NO_ORD}</Text>
+
+        {/* Info rows */}
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Style</Text>
+          <Text style={styles.infoValue}>{noSty}</Text>
         </View>
-        <View style={styles.headerRow}>
-          <Text style={styles.headerLabel}>Style:</Text>
-          <Text style={styles.headerValue}>{master.NO_STY}</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Lô</Text>
+          <Text style={styles.infoValue}>{noLot}</Text>
         </View>
-        <View style={styles.headerRow}>
-          <Text style={styles.headerLabel}>Từ:</Text>
-          <Text style={styles.headerValue}>{master.NAME_DEP_FROM}</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>PO</Text>
+          <Text style={styles.infoValue}>{noOrd}</Text>
         </View>
-        <View style={styles.headerRow}>
-          <Text style={styles.headerLabel}>Đến:</Text>
-          <Text style={styles.headerValue}>{master.NAME_DEP_TO}</Text>
-        </View>
-        <View style={styles.headerRow}>
-          <Text style={styles.headerLabel}>Sản phẩm:</Text>
-          <Text style={styles.headerValue}>{master.NAME_PRD}</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>SP</Text>
+          <Text style={styles.infoValue}>{namePrd || ''}</Text>
         </View>
       </View>
     );
   };
 
   const renderItem = ({item, index}: {item: EditableDetail; index: number}) => {
-    const remaining = item.QTY - item.QTY_DONE;
-
     return (
       <View style={styles.detailItem}>
-        <View style={styles.detailInfo}>
-          <Text style={styles.sizeText}>Size: {item.NAME_SIZE || item.NO_SIZE}</Text>
-          <Text style={styles.colorText}>
-            Màu: {item.NAME_COLOR} ({item.NO_COLOR})
-          </Text>
-          <Text style={styles.remainText}>Còn lại: {remaining}</Text>
-        </View>
-        <View style={styles.qtyInputContainer}>
+        <Text style={styles.colorName}>{item.NAME_COL}</Text>
+        <Text style={styles.remainQty}>{item.QTY_REMAIN}</Text>
+        {canEdit ? (
           <TextInput
-            style={[
-              styles.qtyInput,
-              !canEditDocuments() && styles.qtyInputDisabled,
-            ]}
+            style={styles.qtyInput}
             value={item.editedQty}
             onChangeText={value => handleQtyChange(index, value)}
             keyboardType="numeric"
             placeholder="0"
-            editable={canEditDocuments()}
+            placeholderTextColor={COLORS.grayLight}
             maxLength={6}
           />
-        </View>
+        ) : (
+          <Text style={styles.qtyReadOnly}>{item.QTY_IN_OUT}</Text>
+        )}
       </View>
     );
   };
+
+  const renderFooter = () => (
+    <View style={styles.footerCard}>
+      <View style={styles.footerTopRow}>
+        <View style={styles.footerInfoContainer}>
+          <Text style={styles.footerLabel}>Tổng cộng</Text>
+          <View style={styles.footerRow}>
+            <Text style={styles.footerColorCount}>{totalColors} màu</Text>
+            <Text style={styles.footerTotalQty}>{totalQty}</Text>
+          </View>
+        </View>
+        {canEdit && (
+          <TouchableOpacity
+            onPress={validateAndSave}
+            disabled={saveMutation.isPending}
+            style={styles.saveButton}>
+            {saveMutation.isPending ? (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            ) : (
+              <Text style={styles.saveButtonText}>Lưu</Text>
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
 
   if (isLoading) {
     return (
@@ -207,30 +239,17 @@ const DocDetailScreen: React.FC = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {renderHeader()}
 
-      <Text style={styles.sectionTitle}>Chi tiết</Text>
+      <Text style={styles.sectionTitle}>Chi tiết giao theo Màu</Text>
 
       <FlatList
         data={editableDetails}
         renderItem={renderItem}
-        keyExtractor={(item, index) => `${item.NO_SIZE}-${item.NO_COLOR}-${index}`}
+        keyExtractor={(item, index) => `${item.NO_SIZ}-${item.NO_COL}-${index}`}
         contentContainerStyle={styles.listContent}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
 
-      {canEditDocuments() && (
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            updateMutation.isPending && styles.saveButtonDisabled,
-          ]}
-          onPress={validateAndSave}
-          disabled={updateMutation.isPending}>
-          {updateMutation.isPending ? (
-            <ActivityIndicator color={COLORS.white} />
-          ) : (
-            <Text style={styles.saveButtonText}>Lưu</Text>
-          )}
-        </TouchableOpacity>
-      )}
+      {renderFooter()}
     </KeyboardAvoidingView>
   );
 };
@@ -238,39 +257,66 @@ const DocDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.grayBackground,
+    backgroundColor: COLORS.white,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerSaveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  headerSaveText: {
+    color: COLORS.blue,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Header card
   headerCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.blueLight,
     margin: 12,
     padding: 16,
-    borderRadius: 10,
-    shadowColor: COLORS.black,
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    borderRadius: 12,
   },
-  headerRow: {
+  badgeRow: {
     flexDirection: 'row',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  headerLabel: {
-    width: 80,
-    fontSize: 14,
-    color: COLORS.grayText,
+  badge: {
+    backgroundColor: COLORS.blue,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  headerValue: {
-    flex: 1,
+  badgeText: {
+    color: COLORS.white,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: 'bold',
+  },
+  arrowContainer: {
+    marginHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  infoLabel: {
+    width: 50,
+    fontSize: 12,
+    fontWeight: 'bold',
     color: COLORS.black,
   },
+  infoValue: {
+    flex: 1,
+    fontSize: 12,
+    color: COLORS.black,
+  },
+  // Section title
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -278,74 +324,102 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     marginBottom: 8,
   },
+  // List
   listContent: {
+    marginHorizontal: 12,
+    backgroundColor: COLORS.grayBackground,
+    borderRadius: 12,
     padding: 12,
-    paddingBottom: 100,
   },
+  separator: {
+    height: 1,
+    backgroundColor: COLORS.grayBorder,
+    marginVertical: 8,
+  },
+  // Detail item
   detailItem: {
-    backgroundColor: COLORS.white,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: COLORS.black,
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
+    paddingVertical: 4,
   },
-  detailInfo: {
+  colorName: {
     flex: 1,
-  },
-  sizeText: {
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.black,
   },
-  colorText: {
-    fontSize: 14,
+  remainQty: {
+    fontSize: 16,
     color: COLORS.grayText,
-    marginTop: 2,
-  },
-  remainText: {
-    fontSize: 14,
-    color: COLORS.green,
-    marginTop: 2,
-  },
-  qtyInputContainer: {
-    width: 80,
-    marginLeft: 12,
+    marginRight: 16,
+    minWidth: 40,
+    textAlign: 'right',
   },
   qtyInput: {
-    borderWidth: 1,
-    borderColor: COLORS.grayBorder,
-    borderRadius: 8,
-    padding: 12,
+    width: 60,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.grayBorder,
     fontSize: 16,
-    textAlign: 'center',
-    backgroundColor: COLORS.white,
+    fontWeight: 'bold',
+    textAlign: 'right',
+    paddingVertical: 4,
+    color: COLORS.black,
   },
-  qtyInputDisabled: {
-    backgroundColor: COLORS.grayBackground,
+  qtyReadOnly: {
+    width: 60,
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'right',
+    paddingVertical: 4,
+    color: COLORS.black,
   },
-  saveButton: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    backgroundColor: COLORS.blue,
-    borderRadius: 10,
+  // Footer
+  footerCard: {
+    backgroundColor: COLORS.blueLight,
+    margin: 12,
     padding: 16,
+    borderRadius: 12,
+  },
+  footerLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.black,
+    marginBottom: 4,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  saveButtonDisabled: {
-    backgroundColor: '#90CAF9',
+  footerColorCount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.blue,
+  },
+  footerTotalQty: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.black,
+  },
+  footerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  footerInfoContainer: {
+    flex: 1,
+    marginRight: 16,
+  },
+  saveButton: {
+    backgroundColor: COLORS.blue,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
   saveButtonText: {
     color: COLORS.white,
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

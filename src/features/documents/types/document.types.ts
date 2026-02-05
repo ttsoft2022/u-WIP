@@ -15,12 +15,11 @@ export interface DocMaster {
 
 // Document Detail - matches API response from getwipdocdetail
 export interface DocDetail {
-  NO_SIZE: string;
-  NAME_SIZE: string;
-  NO_COLOR: string;
-  NAME_COLOR: string;
-  QTY: number;
-  QTY_DONE: number;
+  NO_SIZ: string;
+  NO_COL: string;
+  NAME_COL: string;
+  QTY_REMAIN: number;
+  QTY_IN_OUT: number;
 }
 
 // Document list request params

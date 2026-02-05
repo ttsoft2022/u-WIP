@@ -16,11 +16,11 @@ export const useDocList = (params: DocListParams) => {
 /**
  * Hook for fetching document detail
  */
-export const useDocDetail = (noLot: string, noOrd: string, docType: string) => {
+export const useDocDetail = (noLot: string, noOrd712: string, noDep: string, docType: string) => {
   return useQuery({
-    queryKey: ['docDetail', noLot, noOrd, docType],
-    queryFn: () => documentsApi.getDocDetail(noLot, noOrd, docType),
-    enabled: !!noLot && !!noOrd && !!docType,
+    queryKey: ['docDetail', noLot, noOrd712, noDep, docType],
+    queryFn: () => documentsApi.getDocDetail(noLot, noOrd712, noDep, docType),
+    enabled: !!noLot && !!noOrd712 && !!docType,
   });
 };
 
@@ -36,26 +36,26 @@ export const useDocsToday = (docType: number) => {
 };
 
 /**
- * Hook for updating document detail
+ * Hook for saving document (master + details)
+ * Uses 2-step process: insertDocMaster then insertDocDetail
  */
-export const useUpdateDocDetail = () => {
+export const useSaveDocument = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      noLot,
-      noOrd,
-      docType,
-      details,
-    }: {
-      noLot: string;
+    mutationFn: (params: {
       noOrd: string;
+      noOrd712: string;
+      noLot: string;
+      noDep: string;
+      noDepTo: string;
+      noPrd: string;
       docType: string;
-      details: Array<{noSize: string; noColor: string; qty: number}>;
-    }) => documentsApi.updateDocDetail(noLot, noOrd, docType, details),
+      details: Array<{noCol: string; quantity: number}>;
+    }) => documentsApi.saveDocument(params),
     onSuccess: (_, variables) => {
       // Invalidate related queries
-      queryClient.invalidateQueries({queryKey: ['docDetail', variables.noLot, variables.noOrd]});
+      queryClient.invalidateQueries({queryKey: ['docDetail']});
       queryClient.invalidateQueries({queryKey: ['docList']});
       queryClient.invalidateQueries({queryKey: ['docsToday']});
       queryClient.invalidateQueries({queryKey: ['homeInfo']});

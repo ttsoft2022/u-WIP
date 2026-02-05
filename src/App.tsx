@@ -1,9 +1,17 @@
 import React from 'react';
-import {StatusBar} from 'react-native';
-import {NavigationContainer} from '@react-navigation/native';
+import {StatusBar, View, StyleSheet} from 'react-native';
+import {NavigationContainer, DefaultTheme} from '@react-navigation/native';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {RootNavigator} from './navigation';
+
+// Custom theme with white background
+const AppTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: '#FFFFFF',
+  },
+};
 
 // Create Query Client
 const queryClient = new QueryClient({
@@ -17,11 +25,18 @@ const queryClient = new QueryClient({
   },
 });
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+});
+
 const App: React.FC = () => {
   return (
-    <SafeAreaProvider>
+    <View style={styles.container}>
       <QueryClientProvider client={queryClient}>
-        <NavigationContainer>
+        <NavigationContainer theme={AppTheme}>
           <StatusBar
             barStyle="light-content"
             backgroundColor="#1976D2"
@@ -29,7 +44,7 @@ const App: React.FC = () => {
           <RootNavigator />
         </NavigationContainer>
       </QueryClientProvider>
-    </SafeAreaProvider>
+    </View>
   );
 };
 
