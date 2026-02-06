@@ -1,8 +1,8 @@
 import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
-import {zustandMMKVStorage, mmkvStorage} from '../../../shared/services/storage';
-import {STORAGE_KEYS} from '../../../shared/constants/storage';
-import {PERMISSIONS} from '../../../shared/constants/permissions';
+import {zustandMMKVStorage, mmkvStorage} from '../services/mmkvStorage';
+import {STORAGE_KEYS} from '../constants/storage';
+import {PERMISSIONS} from '../constants/permissions';
 import type {User, DatabaseConfig, HomeInfo} from '../types/auth.types';
 
 interface AuthState {

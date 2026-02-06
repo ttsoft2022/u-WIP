@@ -1,4 +1,4 @@
-package com.ttsoft.uwip
+package com.ttsoft.uwiptd
 
 import android.os.Bundle
 import androidx.core.view.WindowCompat

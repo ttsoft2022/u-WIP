@@ -1,6 +1,6 @@
 import axios from 'axios';
 import CryptoJS from 'crypto-js';
-import {serverConfigService} from '../../../services/serverConfig';
+import {serverConfigService} from './serverConfig';
 import type {LoginResponse, HomeInfo, User} from '../types/auth.types';
 
 // MD5 hash function (matching Java implementation)

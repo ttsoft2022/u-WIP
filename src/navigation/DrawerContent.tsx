@@ -8,7 +8,7 @@ import {
   ScrollView,
   SafeAreaView,
 } from 'react-native';
-import {useAuthStore} from '../features/auth/store/authStore';
+import {useAuthStore} from '../store/authStore';
 import {serverConfigService} from '../services/serverConfig';
 import {DatabaseIcon, LogoutIcon, RefreshIcon} from '../components/icons';
 import {useDrawer} from './RootNavigator';

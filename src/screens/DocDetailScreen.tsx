@@ -11,9 +11,9 @@ import {
   Platform,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
-import {useAppNavigation, useScreenActions} from '../../../navigation/RootNavigator';
+import {useAppNavigation, useScreenActions} from '../navigation/RootNavigator';
 import {useDocDetail, useSaveDocument} from '../hooks/useDocuments';
-import {useAuthStore} from '../../auth/store/authStore';
+import {useAuthStore} from '../store/authStore';
 import type {DocDetail} from '../types/document.types';
 
 const COLORS = {

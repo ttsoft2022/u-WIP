@@ -1,7 +1,7 @@
 import {useMutation, useQuery} from '@tanstack/react-query';
 import {authApi} from '../services/authApi';
 import {useAuthStore} from '../store/authStore';
-import {PERMISSIONS} from '../../../shared/constants/permissions';
+import {PERMISSIONS} from '../constants/permissions';
 
 /**
  * Hook for login mutation

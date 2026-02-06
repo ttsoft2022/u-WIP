@@ -1,15 +1,16 @@
-import React from 'react';
+import React, {useState, useMemo} from 'react';
 import {
   View,
   Text,
   FlatList,
   StyleSheet,
+  TouchableOpacity,
+  TextInput,
   RefreshControl,
   ActivityIndicator,
-  TouchableOpacity,
 } from 'react-native';
-import {useAppNavigation} from '../../../navigation/RootNavigator';
-import {useDocsToday} from '../hooks/useDocuments';
+import {useAppNavigation} from '../navigation/RootNavigator';
+import {useDocList} from '../hooks/useDocuments';
 import type {DocMaster} from '../types/document.types';
 
 const COLORS = {
@@ -19,22 +20,32 @@ const COLORS = {
   grayText: '#666666',
   grayBackground: '#EEEEEE',
   grayItemBg: '#F5F5F5',
+  grayBorder: '#e0e0e0',
 };
 
-const DocsTodayScreen: React.FC = () => {
+const DocListScreen: React.FC = () => {
   const {navigate, params} = useAppNavigation();
   const docType = params?.docType || '1';
 
-  const {data: documents, isLoading, refetch} = useDocsToday(parseInt(docType, 10));
+  const [searchText, setSearchText] = useState('');
 
-  // Format number with dots for thousands
-  const formatNumber = (num: number | undefined): string => {
-    if (num === undefined || num === null) return '0';
-    return num.toLocaleString('vi-VN');
-  };
+  const {data: documents, isLoading, refetch} = useDocList({docType});
 
-  // Navigate to DocDetail with isEdit=false (view-only mode, like Android)
-  // Pass noDed (NO_DED) for existing documents from today's list
+  // Filter documents based on search text
+  const filteredDocuments = useMemo(() => {
+    if (!documents) return [];
+    if (!searchText.trim()) return documents;
+
+    const search = searchText.toLowerCase();
+    return documents.filter(
+      doc =>
+        doc.NO_LOT?.toLowerCase().includes(search) ||
+        doc.NO_ORD?.toLowerCase().includes(search) ||
+        doc.NO_STY?.toLowerCase().includes(search) ||
+        doc.NAME_PRD?.toLowerCase().includes(search),
+    );
+  }, [documents, searchText]);
+
   const handleDocPress = (doc: DocMaster) => {
     navigate('DocDetail', {
       noLot: doc.NO_LOT,
@@ -48,9 +59,15 @@ const DocsTodayScreen: React.FC = () => {
       noPrd: doc.NO_PRD,
       namePrd: doc.NAME_PRD,
       docType: docType,
-      isEdit: false, // View-only mode for today's documents
-      noDed: doc.NO_DED || '', // Pass actual NO_DED for existing documents
+      isEdit: true, // Allow editing from DocList (like Android)
+      noDed: '', // Empty for new documents from DocList (like Android)
     });
+  };
+
+  // Format number with dots for thousands
+  const formatNumber = (num: number | undefined): string => {
+    if (num === undefined || num === null) return '0';
+    return num.toLocaleString('vi-VN');
   };
 
   const renderItem = ({item}: {item: DocMaster}) => (
@@ -95,31 +112,43 @@ const DocsTodayScreen: React.FC = () => {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyText}>
-        {isLoading ? 'Đang tải...' : 'Không có chứng từ hôm nay'}
+        {isLoading ? 'Đang tải...' : 'Không có chứng từ'}
       </Text>
     </View>
   );
 
-  if (isLoading && !documents) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.blue} />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      <FlatList
-        data={documents}
-        renderItem={renderItem}
-        keyExtractor={(item, index) => `${item.NO_LOT}-${item.NO_ORD}-${index}`}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refetch} />
-        }
-        ListEmptyComponent={renderEmpty}
-      />
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Tìm PO"
+          placeholderTextColor={COLORS.grayText}
+          value={searchText}
+          onChangeText={setSearchText}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
+
+      {/* Document List */}
+      {isLoading && !documents ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.blue} />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredDocuments}
+          renderItem={renderItem}
+          keyExtractor={(item, index) => `${item.NO_LOT}-${item.NO_ORD}-${index}`}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={isLoading} onRefresh={refetch} />
+          }
+          ListEmptyComponent={renderEmpty}
+        />
+      )}
     </View>
   );
 };
@@ -129,13 +158,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.white,
   },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: COLORS.white,
+  },
+  searchInput: {
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.grayBorder,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    fontSize: 16,
+    textAlign: 'center',
+    color: COLORS.black,
+  },
+  listContent: {
+    padding: 8,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  listContent: {
-    padding: 8,
   },
   itemContainer: {
     backgroundColor: COLORS.grayItemBg,
@@ -147,7 +191,7 @@ const styles = StyleSheet.create({
   badgeContainer: {
     alignSelf: 'flex-start',
     backgroundColor: COLORS.blue,
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginBottom: 12,
@@ -201,4 +245,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default DocsTodayScreen;
+export default DocListScreen;

@@ -9,15 +9,15 @@ import {
   ImageBackground,
   ImageSourcePropType,
 } from 'react-native';
-import {useAuthStore} from '../../auth/store/authStore';
-import {useHomeInfo} from '../../auth/hooks/useAuth';
-import {ChevronRightIcon} from '../../../components/icons';
-import {useAppNavigation} from '../../../navigation/RootNavigator';
+import {useAuthStore} from '../store/authStore';
+import {useHomeInfo} from '../hooks/useAuth';
+import {ChevronRightIcon} from '../components/icons';
+import {useAppNavigation} from '../navigation/RootNavigator';
 
 // Button background images
-const btnClothes = require('../../../assets/images/btn_clothes.png');
-const btnWasher = require('../../../assets/images/btn_washer.png');
-const btnIron = require('../../../assets/images/btn_iron.png');
+const btnClothes = require('../assets/images/btn_clothes.png');
+const btnWasher = require('../assets/images/btn_washer.png');
+const btnIron = require('../assets/images/btn_iron.png');
 
 // Colors from Android app
 const COLORS = {

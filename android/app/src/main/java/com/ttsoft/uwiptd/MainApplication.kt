@@ -1,4 +1,4 @@
-package com.ttsoft.uwip
+package com.ttsoft.uwiptd
 
 import android.app.Application
 import com.facebook.react.PackageList

@@ -19,8 +19,8 @@ import {
   PasswordIcon,
   DatabaseIcon,
   CheckIcon,
-} from '../../../components/icons';
-import {serverConfigService} from '../../../services/serverConfig';
+} from '../components/icons';
+import {serverConfigService} from '../services/serverConfig';
 
 // Colors from Android app
 const COLORS = {

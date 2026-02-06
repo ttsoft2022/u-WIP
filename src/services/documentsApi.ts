@@ -1,6 +1,6 @@
 import axios from 'axios';
-import {serverConfigService} from '../../../services/serverConfig';
-import {useAuthStore} from '../../auth/store/authStore';
+import {serverConfigService} from './serverConfig';
+import {useAuthStore} from '../store/authStore';
 import type {DocMaster, DocDetail, DocListParams} from '../types/document.types';
 
 export const documentsApi = {

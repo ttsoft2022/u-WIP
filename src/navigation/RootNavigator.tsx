@@ -13,13 +13,13 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {useAuthStore} from '../features/auth/store/authStore';
+import {useAuthStore} from '../store/authStore';
 import {serverConfigService} from '../services/serverConfig';
-import LoginScreen from '../features/auth/screens/LoginScreen';
-import HomeScreen from '../features/home/screens/HomeScreen';
-import DocListScreen from '../features/documents/screens/DocListScreen';
-import DocDetailScreen from '../features/documents/screens/DocDetailScreen';
-import DocsTodayScreen from '../features/documents/screens/DocsTodayScreen';
+import LoginScreen from '../screens/LoginScreen';
+import HomeScreen from '../screens/HomeScreen';
+import DocListScreen from '../screens/DocListScreen';
+import DocDetailScreen from '../screens/DocDetailScreen';
+import DocsTodayScreen from '../screens/DocsTodayScreen';
 import DrawerContent from './DrawerContent';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
